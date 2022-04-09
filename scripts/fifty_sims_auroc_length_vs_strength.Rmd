@@ -1,0 +1,116 @@
+---
+title: "Simulated data: auROC plots for various effect strengths and sizes - 50 simulations"
+author: "Brendan Law"
+date: "09/04/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+These are plots which summarise the performance of WaveQTL vs WaveQTL_HMT, based on area under an receiver operating characteristic curve (AUC). These AUC plots summarise each algorithm's ability to detect signals on 200 simulated datasets. This was then repeated 50 times to quantify the variability in the AUC measure for both algorithms, at each effect length and strength. More info can be found in the manuscript's section on simulation.
+
+Data pre-processing functions:
+```{r}
+library(ROCR)
+
+extract_roc_plot_data <- function(sims_list){
+
+  num_sims <- length(sims_list$null_waveqtl_lhood)
+  preds_nohmt <- matrix(c(sims_list$null_waveqtl_lhood
+                          ,sims_list$alt_waveqtl_lhood
+                          ,rep(0,num_sims),rep(1,num_sims))
+                        ,nrow = 2*num_sims,ncol = 2,byrow = F)
+  preds_hmt <- matrix(c(sims_list$null_waveqtl_hmt_lhood
+                        ,sims_list$alt_waveqtl_hmt_lhood
+                        ,rep(0,num_sims),rep(1,num_sims))
+                      ,nrow = 2*num_sims,ncol = 2,byrow = F)
+  
+  perf_nohmt <- performance(prediction(preds_nohmt[,1],preds_nohmt[,2]),measure = "auc")
+  perf_hmt <- performance(prediction(preds_hmt[,1],preds_hmt[,2]),measure = "auc")
+  
+  return(c(
+    unlist(attr(perf_nohmt,"y.values"))
+    ,unlist(attr(perf_hmt,"y.values"))
+  ))
+}
+```
+
+
+Process data from all 50 sets of simulations:
+```{r}
+effect_lengths <- c(8,16,24)
+for (len in effect_lengths){
+  simulated_data <- list()
+  assign(paste0("auroc_results_nohmt_l",len), c())
+  assign(paste0("auroc_results_hmt_l",len), c())
+  assign(paste0("summary_nohmt_l",len), c())
+  assign(paste0("summary_hmt_l",len), c())
+  
+  for (i in 1:50){
+    sim_data <- readRDS(paste0("../data/auroc_simulation_data/simulation_of_50_instances/20220328_l",len,"_paper_nogrp_od210_sim",i,".RDS"))
+    
+    # We have all strengths from effect lengths 8 and 16, but only a couple from length 24
+    # as the length meant the signal was too strong and all of the effect strengths had
+    # very similar results
+    if(len == 24){
+      roc_data <- sapply(sim_data[1:2],extract_roc_plot_data)
+      simulated_data[[i]] <- roc_data      
+    }else{
+      roc_data <- sapply(sim_data,extract_roc_plot_data)
+      simulated_data[[i]] <- roc_data      
+    }
+    
+  }
+  
+  assign(paste0("auroc_results_nohmt_l",len), sapply(simulated_data,function(x){x[1,]}))
+  assign(paste0("auroc_results_hmt_l",len), sapply(simulated_data,function(x){x[2,]}))
+  assign(paste0("summary_nohmt_l",len), apply(get(paste0("auroc_results_nohmt_l",len)),1,summary))
+  assign(paste0("summary_hmt_l",len), apply(get(paste0("auroc_results_hmt_l",len)),1,summary))
+  
+}
+```
+
+Summary of the median auROC for different effect strengths and lengths:
+```{r}
+cols.efsize = c("#104E8B","#FFA500","#006400")
+lab.size = 1.2
+x.lab.size = 1.2
+y.lab.size = 1.2
+line.thick = 1.2
+pch.type = 19
+lab.size = 1.5
+x.lab.size = 1.4
+line.thick = 1.2
+pch.type = 19
+cex.thick = 1.4
+cex.main.size = 1.5
+x.ticks <- round((1:5/3)*100,0)
+path = "../figures/auroc_by_strength_length.png"
+png(path, units="in", width = 6, height = 6, res =300)
+# par(mgp=c(3,2,0), mar = c(4,5,3,1))
+par(mar = c(4,5,3,1))
+plot(0,0, xlim = c(min(x.ticks),max(x.ticks)), ylim = c(0.5,1), xlab = "% of effect strength", ylab ="AUC", type="n", cex.lab=lab.size, axes=FALSE, main = "AUC by effect strength and length")
+
+lines(x = x.ticks, y = apply(auroc_results_nohmt_l8,1,median),col = cols.efsize[1],type = "o",lty=3, pch = pch.type, cex = cex.thick, lwd=line.thick, xaxt="n", yaxt="n")
+lines(x = x.ticks, y = apply(auroc_results_hmt_l8,1,median),col = cols.efsize[1],type = "o",lty=1, pch = pch.type, cex = cex.thick, lwd=line.thick, xaxt="n", yaxt="n")
+
+lines(x = x.ticks, y = apply(auroc_results_nohmt_l16,1,median),col = cols.efsize[2],type = "o",lty=3, pch = pch.type, cex = cex.thick, lwd=line.thick, xaxt="n", yaxt="n")
+lines(x = x.ticks, y = apply(auroc_results_hmt_l16,1,median),col = cols.efsize[2],type = "o",lty=1, pch = pch.type, cex = cex.thick, lwd=line.thick, xaxt="n", yaxt="n")
+
+lines(x = x.ticks[3:4], y = apply(auroc_results_nohmt_l24,1,median),col = cols.efsize[3],type = "o",lty=3, pch = pch.type, cex = cex.thick, lwd=line.thick, xaxt="n", yaxt="n")
+lines(x = x.ticks[3:4], y = apply(auroc_results_hmt_l24,1,median),col = cols.efsize[3],type = "o",lty=1, pch = pch.type, cex = cex.thick, lwd=line.thick, xaxt="n", yaxt="n")
+
+axis(side = 2, cex.axis = y.lab.size)
+axis(side = 1, at = x.ticks, labels = x.ticks, tick = x.ticks, cex.axis = x.lab.size)
+legend("bottomright",legend = c("WaveQTL","WaveQTL-HMT",paste("Effect length ", effect_lengths))
+       ,col=c(1,1,cols.efsize)
+       ,lty=c(3,1,rep(1,length(effect_lengths)))
+       , cex = 1.5,merge = FALSE, bg = "white", bty = "n", text.col = c(1,1,cols.efsize))
+box()
+```
+
+Boxplots of differences between WaveQTL-HMT and WaveQTL for each of the 50 simulation runs, for effect length 16, across all effect strengths:
+
+Boxplots of differences between WaveQTL-HMT and WaveQTL for each of the 50 simulation runs, for effect strength 100%, across all effect lengths:
