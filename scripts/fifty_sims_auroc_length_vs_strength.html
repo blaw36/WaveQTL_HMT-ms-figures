@@ -396,7 +396,7 @@ for (len in effect_lengths){
   assign(paste0(&quot;summary_hmt_l&quot;,len), c())
   
   for (i in 1:50){
-    sim_data &lt;- readRDS(paste0(&quot;../data/auroc_simulation_data/simulation_of_50_instances/20220328_l&quot;,len,&quot;_paper_nogrp_od210_sim&quot;,i,&quot;.RDS&quot;))
+    sim_data &lt;- readRDS(paste0(&quot;../data/simulation_of_50_instances/20220328_l&quot;,len,&quot;_paper_nogrp_od210_sim&quot;,i,&quot;.RDS&quot;))
     
     # We have all strengths from effect lengths 8 and 16, but only a couple from length 24
     # as the length meant the signal was too strong and all of the effect strengths had
@@ -453,8 +453,82 @@ legend(&quot;bottomright&quot;,legend = c(&quot;WaveQTL&quot;,&quot;WaveQTL-HMT&
        ,lty=c(3,1,rep(1,length(effect_lengths)))
        , cex = 1.5,merge = FALSE, bg = &quot;white&quot;, bty = &quot;n&quot;, text.col = c(1,1,cols.efsize))
 box()</code></pre>
+<p>Analyse differences between the two algorithms at each simulation, given there is some variation in the data and signal strength amongst the simulation runs:</p>
+<pre class="r"><code>library(reshape2)</code></pre>
+<pre><code>## Warning: package &#39;reshape2&#39; was built under R version 3.5.3</code></pre>
+<pre class="r"><code># Differences on a log scale
+l8_data &lt;- data.frame(
+  t(log(auroc_results_hmt_l8,10)-log(auroc_results_nohmt_l8,10))
+)
+l16_data &lt;- data.frame(
+  t(log(auroc_results_hmt_l16,10)-log(auroc_results_nohmt_l16,10))
+)
+l24_data &lt;- data.frame(
+  t(log(auroc_results_hmt_l24,10)-log(auroc_results_nohmt_l24,10))
+)
+
+names(l8_data) &lt;- c(&quot;33%&quot;,&quot;67%&quot;,&quot;100%&quot;,&quot;133%&quot;,&quot;167%&quot;)
+names(l16_data) &lt;- c(&quot;33%&quot;,&quot;67%&quot;,&quot;100%&quot;,&quot;133%&quot;,&quot;167%&quot;)
+names(l24_data) &lt;- c(&quot;100%&quot;,&quot;133%&quot;)
+
+l8_data$effect_length=8
+l16_data$effect_length=16
+l24_data$effect_length=24
+
+sim_diff_data &lt;- rbind.data.frame(
+  melt(l8_data,id.vars = &quot;effect_length&quot;,value.name=&quot;auroc&quot;,variable.name=&quot;effect_strength&quot;)
+  ,melt(l16_data,id.vars = &quot;effect_length&quot;,value.name=&quot;auroc&quot;,variable.name=&quot;effect_strength&quot;)
+  ,melt(l24_data,id.vars = &quot;effect_length&quot;,value.name=&quot;auroc&quot;,variable.name=&quot;effect_strength&quot;)
+)</code></pre>
 <p>Boxplots of differences between WaveQTL-HMT and WaveQTL for each of the 50 simulation runs, for effect length 16, across all effect strengths:</p>
+<pre class="r"><code>library(&quot;vioplot&quot;)</code></pre>
+<pre><code>## Loading required package: sm</code></pre>
+<pre><code>## Package &#39;sm&#39;, version 2.2-5.7: type help(sm) for summary information</code></pre>
+<pre><code>## Loading required package: zoo</code></pre>
+<pre><code>## 
+## Attaching package: &#39;zoo&#39;</code></pre>
+<pre><code>## The following objects are masked from &#39;package:base&#39;:
+## 
+##     as.Date, as.Date.numeric</code></pre>
+<pre class="r"><code>path = &quot;../figures/l16_diff_log_auc.png&quot;
+png(path, units=&quot;in&quot;, width = 6, height = 6, res =300)
+par(mar = c(5, 5, 3, 1))
+ylab_expr = expression(paste(log[10], &quot; (&quot;, AUC[HMT],&quot;) - &quot;, log[10], &quot; (&quot;, AUC[WaveQTL],&quot;)&quot;))
+plot(0:1,0:1,type=&quot;n&quot;,xlim=c(0.5,5.5), ylim = c(-0.01,0.03),
+     axes=FALSE, ylab = ylab_expr, cex.lab = 1.1, xlab = &quot;Effect strength&quot;,
+     main=&quot;HMT and WaveQTL performance: effect length 16&quot;)
+vioplot(
+  sim_diff_data[sim_diff_data$effect_length == 16 &amp; sim_diff_data$effect_strength == &#39;33%&#39;,&quot;auroc&quot;]
+  ,sim_diff_data[sim_diff_data$effect_length == 16 &amp; sim_diff_data$effect_strength == &#39;67%&#39;,&quot;auroc&quot;]
+  ,sim_diff_data[sim_diff_data$effect_length == 16 &amp; sim_diff_data$effect_strength == &#39;100%&#39;,&quot;auroc&quot;]
+  ,sim_diff_data[sim_diff_data$effect_length == 16 &amp; sim_diff_data$effect_strength == &#39;133%&#39;,&quot;auroc&quot;]
+  ,sim_diff_data[sim_diff_data$effect_length == 16 &amp; sim_diff_data$effect_strength == &#39;167%&#39;,&quot;auroc&quot;]
+  , add=TRUE, col=&quot;gold&quot;)
+axis(2)
+axis(side = 1, at = 1:5
+     , labels = c(&quot;33%&quot;,&quot;67%&quot;,&quot;100%&quot;,&quot;133%&quot;,&quot;167%&quot;)
+     , cex.axis = 0.9)
+abline(h=0,col=&quot;grey40&quot;,lty=3)
+box()</code></pre>
 <p>Boxplots of differences between WaveQTL-HMT and WaveQTL for each of the 50 simulation runs, for effect strength 100%, across all effect lengths:</p>
+<pre class="r"><code>path = &quot;../figures/diff_log_auc_strength_100.png&quot;
+png(path, units=&quot;in&quot;, width = 6, height = 6, res =300)
+par(mar = c(5, 5, 3, 1))
+ylab_expr = expression(paste(log[10], &quot; (&quot;, AUC[HMT],&quot;) - &quot;, log[10], &quot; (&quot;, AUC[WaveQTL],&quot;)&quot;))
+plot(0:1,0:1,type=&quot;n&quot;,xlim=c(0.5,3.5), ylim = c(-0.01,0.02),
+     axes=FALSE, ylab = ylab_expr, cex.lab = 1.1, xlab = &quot;Effect length&quot;,
+     main=&quot;HMT and WaveQTL performance: effect strength 100%&quot;)
+vioplot(
+  sim_diff_data[sim_diff_data$effect_length == 8 &amp; sim_diff_data$effect_strength == &#39;100%&#39;,&quot;auroc&quot;]
+  ,sim_diff_data[sim_diff_data$effect_length == 16 &amp; sim_diff_data$effect_strength == &#39;100%&#39;,&quot;auroc&quot;]
+  ,sim_diff_data[sim_diff_data$effect_length == 24 &amp; sim_diff_data$effect_strength == &#39;100%&#39;,&quot;auroc&quot;]
+  , add=TRUE, col=cols.efsize)
+axis(2)
+axis(side = 1, at = 1:3
+     , labels = c(8,16,24)
+     , cex.axis = 0.9)
+abline(h=0,col=&quot;grey40&quot;,lty=3)
+box()</code></pre>
 
 
 

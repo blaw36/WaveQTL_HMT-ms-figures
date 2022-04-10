@@ -49,9 +49,9 @@ extract_roc_plot_data <- function(sims_list){
 
 Process data:
 ```{r}
-l8 <- readRDS("../data/auroc_simulation_data/one_instance/20220327_l8_paper_nogrp_od210_combined.RDS")
-l16 <- readRDS("../data/auroc_simulation_data/one_instance/20220327_l16_paper_nogrp_od210_combined.RDS")
-l24 <- readRDS("../data/auroc_simulation_data/one_instance/20220327_l24_paper_nogrp_od210_combined.RDS")
+l8 <- readRDS("../data/one_instance/20220327_l8_paper_nogrp_od210_combined.RDS")
+l16 <- readRDS("../data/one_instance/20220327_l16_paper_nogrp_od210_combined.RDS")
+l24 <- readRDS("../data/one_instance/20220327_l24_paper_nogrp_od210_combined.RDS")
 l8_roc_data <- lapply(l8,extract_roc_plot_data)
 l16_roc_data <- lapply(l16,extract_roc_plot_data)
 l24_roc_data <- lapply(l24,extract_roc_plot_data)

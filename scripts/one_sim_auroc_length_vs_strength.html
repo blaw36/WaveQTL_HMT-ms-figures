@@ -391,9 +391,9 @@ pre code {
   ))
 }</code></pre>
 <p>Process data:</p>
-<pre class="r"><code>l8 &lt;- readRDS(&quot;../data/auroc_simulation_data/one_instance/20220327_l8_paper_nogrp_od210_combined.RDS&quot;)
-l16 &lt;- readRDS(&quot;../data/auroc_simulation_data/one_instance/20220327_l16_paper_nogrp_od210_combined.RDS&quot;)
-l24 &lt;- readRDS(&quot;../data/auroc_simulation_data/one_instance/20220327_l24_paper_nogrp_od210_combined.RDS&quot;)
+<pre class="r"><code>l8 &lt;- readRDS(&quot;../data/one_instance/20220327_l8_paper_nogrp_od210_combined.RDS&quot;)
+l16 &lt;- readRDS(&quot;../data/one_instance/20220327_l16_paper_nogrp_od210_combined.RDS&quot;)
+l24 &lt;- readRDS(&quot;../data/one_instance/20220327_l24_paper_nogrp_od210_combined.RDS&quot;)
 l8_roc_data &lt;- lapply(l8,extract_roc_plot_data)
 l16_roc_data &lt;- lapply(l16,extract_roc_plot_data)
 l24_roc_data &lt;- lapply(l24,extract_roc_plot_data)</code></pre>
