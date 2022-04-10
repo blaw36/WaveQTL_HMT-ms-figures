@@ -1,0 +1,133 @@
+---
+title: "Real data analysis"
+author: "Brendan Law"
+date: "10/04/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Plots which summarise the p-value and FDR curve analysis of both methods on 10,000 randomly selected 1024bp sites.
+
+Data pre-processing functions:
+```{r}
+library(data.table)
+
+hmt_pvals = readRDS("../data/real_data_analysis/hmt_pvals.RDS")
+nohmt_pvals = readRDS("../data/real_data_analysis/nohmt_pvals.RDS")
+
+hmt_pvals = hmt_pvals[!is.na(pval)]
+nohmt_pvals = nohmt_pvals[!is.na(pval)]
+
+pval = data.table(
+  pval.hmt = as.numeric(hmt_pvals$pval)
+  ,pval.nohmt = as.numeric(nohmt_pvals$pval)
+)
+```
+
+
+```{r}
+# check histograms
+hist(pval$pval.hmt, breaks=100, main = "hmt")
+
+hist(pval$pval.nohmt, breaks=100, main = "nohmt")
+
+# apply qvalue package
+library("qvalue")
+qval.hmt = qvalue(pval$pval.hmt) # 1
+qval.nohmt = qvalue(pval$pval.nohmt) # 0.002288085
+
+# check the proportion of null cases
+qval.hmt$pi0 # 0.8354974
+qval.nohmt$pi0 # 0.8496002
+
+# possible values of FDR
+alpha.list = seq(0, 0.1, by=0.001)
+length(alpha.list)
+## 101
+
+# count the number of significant tests at a given FDR
+num.hmt = num.nohmt = rep(NA, length(alpha.list))
+for(i in 1:length(alpha.list)){
+  num.hmt[i] = sum(qval.hmt$qvalues < alpha.list[i])
+  num.nohmt[i] = sum(qval.nohmt$qvalues < alpha.list[i])
+}
+
+# number of significant tests at FDR = 0.05
+wh = which(alpha.list == 0.05)
+num.hmt[wh] # 208
+num.nohmt[wh] # 147
+```
+
+```{r}
+# Make FDR curves
+wh = max(which(num.hmt == 0))
+num.hmt[1:wh] = num.hmt[wh+1]*seq(0,wh-1)/wh
+wh = max(which(num.nohmt == 0))
+num.nohmt[1:wh] = num.nohmt[wh+1]*seq(0,wh-1)/wh
+
+hmt.col = "#483D8B"
+nohmt.col = "#FF8C00"
+path = "../figures/FDR.png"
+png(path, units="in", width = 5, height = 5, res =300)
+par(mar = c(4, 4, 1, 1))
+ymax = max(num.hmt, num.nohmt) + 50
+ymin = 0
+plot(alpha.list, num.hmt, ylim=c(ymin,ymax), col=hmt.col, type = "l", lty = 1, lwd = 1.5, xlab = "FDR", ylab="Number of significant tests", main="")
+points(alpha.list, num.nohmt, ylim=c(ymin,ymax), col=nohmt.col, type="l", lty = 1, lwd = 1.5)
+abline(v=0.05, col="grey")
+legend(0,ymax, c("HMT", "No HMT"), col = c(hmt.col, nohmt.col), lty = c(1,1), cex = 0.9, lwd = 1.5, text.col = "black",merge = FALSE, bg = "white")
+dev.off()
+```
+
+Make p-value and q-value plots:
+```{r}
+# q-value plots
+path = "../figures/qvalues.png"
+png(path, units="in", width = 5, height = 5, res =300)
+par(mar = c(4, 4, 1, 1))
+yval = -log(qval.hmt$qvalues,10)
+xval = -log(qval.nohmt$qvalues,10)
+sig.cut = -log(0.05, 10)
+nonsig.cut = -log(0.5, 10)
+tblue = "#00008B80"
+tred = "#ff634780"
+tblack = "#CCCCCC80"
+tgreen = "#458b0080"
+col.list = rep(tblack, length(xval))
+wh = which((xval > sig.cut) & (yval > sig.cut))
+col.list[wh] = tblue
+wh = which((xval < nonsig.cut) & (yval > sig.cut))
+col.list[wh] = tred
+wh = which((xval > sig.cut) & (yval < nonsig.cut))
+col.list[wh] = tgreen
+plot(xval, yval, pch=46, cex=4, col= col.list, xlab = "-log10(qvalue) with no HMT", ylab ="-log10(qvalue) with HMT")
+lines(c(min(xval, yval),max(xval, yval)), c(min(xval, yval),max(xval, yval)), lty = 2, col ="darkgrey")
+dev.off()
+
+
+# p-value plots
+path = "../figures/pvalues.png"
+png(path, units="in", width = 5, height = 5, res =300)
+par(mar = c(4, 4, 1, 1))
+yval = -log(hmt_pvals$pval,10)
+xval = -log(nohmt_pvals$pval,10)
+sig.cut = -log(0.05, 10)
+nonsig.cut = -log(0.5, 10)
+tblue = "#00008B80"
+tred = "#ff634780"
+tblack = "#CCCCCC80"
+tgreen = "#458b0080"
+col.list = rep(tblack, length(xval))
+wh = which((xval > sig.cut) & (yval > sig.cut))
+col.list[wh] = tblue
+wh = which((xval < nonsig.cut) & (yval > sig.cut))
+col.list[wh] = tred
+wh = which((xval > sig.cut) & (yval < nonsig.cut))
+col.list[wh] = tgreen
+plot(xval, yval, pch=46, cex=4, col= col.list, xlab = "-log10(pvalue) with no HMT", ylab ="-log10(pvalue) with HMT")
+lines(c(min(xval, yval),max(xval, yval)), c(min(xval, yval),max(xval, yval)), lty = 2, col ="darkgrey")
+dev.off()
+```

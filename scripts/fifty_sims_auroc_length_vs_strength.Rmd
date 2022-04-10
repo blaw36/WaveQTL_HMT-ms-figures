@@ -104,7 +104,7 @@ lines(x = x.ticks[3:4], y = apply(auroc_results_hmt_l24,1,median),col = cols.efs
 
 axis(side = 2, cex.axis = y.lab.size)
 axis(side = 1, at = x.ticks, labels = x.ticks, tick = x.ticks, cex.axis = x.lab.size)
-legend("bottomright",legend = c("WaveQTL","WaveQTL-HMT",paste("Effect length ", effect_lengths))
+legend("bottomright",legend = c("No HMT","HMT",paste("Effect length ", effect_lengths))
        ,col=c(1,1,cols.efsize)
        ,lty=c(3,1,rep(1,length(effect_lengths)))
        , cex = 1.5,merge = FALSE, bg = "white", bty = "n", text.col = c(1,1,cols.efsize))

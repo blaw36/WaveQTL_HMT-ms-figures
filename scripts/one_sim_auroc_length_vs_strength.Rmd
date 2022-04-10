@@ -86,8 +86,8 @@ for(idx in indices_to_use){
 lines(seq(0,1,length.out = 10000),seq(0,1,length.out = 10000), col="grey60", xaxt="n", yaxt="n", pch=pch.type, lwd=line.thick, cex=cex.thick)
 axis(side = 2, cex.axis = y.lab.size)
 axis(side = 1, cex.axis = x.lab.size)
-legend(0.55,0.3
-       ,legend = c("WaveQTL","WaveQTL-HMT",as.character(unlist(lapply(l8,function(x){x$params_list$effect_multiple})[indices_to_use])))
+legend(0.65,0.3
+       ,legend = c("No HMT","HMT",as.character(unlist(lapply(l8,function(x){x$params_list$effect_multiple})[indices_to_use])))
        ,lty = c(3,1,rep(1,length(indices_to_use)))
        ,col = c("black","black",cols.efsize)
        ,text.col = c("black","black",cols.efsize)
