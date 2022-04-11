@@ -141,14 +141,20 @@ sim_diff_data <- rbind.data.frame(
 )
 ```
 
-Boxplots of differences between WaveQTL-HMT and WaveQTL for each of the 50 simulation runs, for effect length 16, across all effect strengths:
+Two boxplots combined:
+- Boxplots of differences between WaveQTL-HMT and WaveQTL for each of the 50 simulation runs, for effect length 16, across all effect strengths:
+- Boxplots of differences between WaveQTL-HMT and WaveQTL for each of the 50 simulation runs, for effect strength 100%, across all effect lengths:
 ```{r}
 library("vioplot")
-path = "../figures/l16_diff_log_auc.png"
-png(path, units="in", width = 6, height = 6, res =300)
-par(mar = c(5, 5, 3, 1))
+path = "../figures/diff_log_auc_combined.png"
+png(path, units="in", width = 12, height = 6, res =300)
+
+numfig = 2
+nf <- layout(matrix(1:numfig,1,numfig,byrow=FALSE),TRUE)
+
+par(mar = c(4, 5, 3, 1))
 ylab_expr = expression(paste(log[10], " (", AUC[HMT],") - ", log[10], " (", AUC[WaveQTL],")"))
-plot(0:1,0:1,type="n",xlim=c(0.5,5.5), ylim = c(-0.01,0.03),
+plot(0,0,type="n",xlim=c(0.5,5.5), ylim = c(-0.01,0.03),
      axes=FALSE, ylab = ylab_expr, cex.lab = 1.1, xlab = "Effect strength",
      main="HMT and WaveQTL performance: effect length 16")
 vioplot(
@@ -157,33 +163,76 @@ vioplot(
   ,sim_diff_data[sim_diff_data$effect_length == 16 & sim_diff_data$effect_strength == '100%',"auroc"]
   ,sim_diff_data[sim_diff_data$effect_length == 16 & sim_diff_data$effect_strength == '133%',"auroc"]
   ,sim_diff_data[sim_diff_data$effect_length == 16 & sim_diff_data$effect_strength == '167%',"auroc"]
-  , add=TRUE, col="gold")
+  , add=TRUE, col=c(rep("peachpuff",2),"darkorange",rep("peachpuff",2)))
 axis(2)
 axis(side = 1, at = 1:5
      , labels = c("33%","67%","100%","133%","167%")
      , cex.axis = 0.9)
 abline(h=0,col="grey40",lty=3)
 box()
-```
-
-Boxplots of differences between WaveQTL-HMT and WaveQTL for each of the 50 simulation runs, for effect strength 100%, across all effect lengths:
-```{r}
-path = "../figures/diff_log_auc_strength_100.png"
-png(path, units="in", width = 6, height = 6, res =300)
-par(mar = c(5, 5, 3, 1))
-ylab_expr = expression(paste(log[10], " (", AUC[HMT],") - ", log[10], " (", AUC[WaveQTL],")"))
-plot(0:1,0:1,type="n",xlim=c(0.5,3.5), ylim = c(-0.01,0.02),
+par(mar = c(4, 5, 3, 1))
+plot(0,0,type="n",xlim=c(0.5,3.5), ylim = c(-0.01,0.02),
      axes=FALSE, ylab = ylab_expr, cex.lab = 1.1, xlab = "Effect length",
      main="HMT and WaveQTL performance: effect strength 100%")
 vioplot(
   sim_diff_data[sim_diff_data$effect_length == 8 & sim_diff_data$effect_strength == '100%',"auroc"]
   ,sim_diff_data[sim_diff_data$effect_length == 16 & sim_diff_data$effect_strength == '100%',"auroc"]
   ,sim_diff_data[sim_diff_data$effect_length == 24 & sim_diff_data$effect_strength == '100%',"auroc"]
-  , add=TRUE, col=cols.efsize)
+  , add=TRUE, col=c("peachpuff","darkorange","peachpuff"))
 axis(2)
 axis(side = 1, at = 1:3
      , labels = c(8,16,24)
      , cex.axis = 0.9)
 abline(h=0,col="grey40",lty=3)
 box()
+```
+
+
+
+## Old scripts
+Boxplots of differences between WaveQTL-HMT and WaveQTL for each of the 50 simulation runs, for effect length 16, across all effect strengths:
+```{r}
+# library("vioplot")
+# path = "../figures/l16_diff_log_auc.png"
+# png(path, units="in", width = 6, height = 6, res =300)
+# par(mar = c(5, 5, 3, 1))
+# ylab_expr = expression(paste(log[10], " (", AUC[HMT],") - ", log[10], " (", AUC[WaveQTL],")"))
+# plot(0:1,0:1,type="n",xlim=c(0.5,5.5), ylim = c(-0.01,0.03),
+#      axes=FALSE, ylab = ylab_expr, cex.lab = 1.1, xlab = "Effect strength",
+#      main="HMT and WaveQTL performance: effect length 16")
+# vioplot(
+#   sim_diff_data[sim_diff_data$effect_length == 16 & sim_diff_data$effect_strength == '33%',"auroc"]
+#   ,sim_diff_data[sim_diff_data$effect_length == 16 & sim_diff_data$effect_strength == '67%',"auroc"]
+#   ,sim_diff_data[sim_diff_data$effect_length == 16 & sim_diff_data$effect_strength == '100%',"auroc"]
+#   ,sim_diff_data[sim_diff_data$effect_length == 16 & sim_diff_data$effect_strength == '133%',"auroc"]
+#   ,sim_diff_data[sim_diff_data$effect_length == 16 & sim_diff_data$effect_strength == '167%',"auroc"]
+#   , add=TRUE, col="gold")
+# axis(2)
+# axis(side = 1, at = 1:5
+#      , labels = c("33%","67%","100%","133%","167%")
+#      , cex.axis = 0.9)
+# abline(h=0,col="grey40",lty=3)
+# box()
+```
+
+Boxplots of differences between WaveQTL-HMT and WaveQTL for each of the 50 simulation runs, for effect strength 100%, across all effect lengths:
+```{r}
+# path = "../figures/diff_log_auc_strength_100.png"
+# png(path, units="in", width = 6, height = 6, res =300)
+# par(mar = c(5, 5, 3, 1))
+# ylab_expr = expression(paste(log[10], " (", AUC[HMT],") - ", log[10], " (", AUC[WaveQTL],")"))
+# plot(0:1,0:1,type="n",xlim=c(0.5,3.5), ylim = c(-0.01,0.02),
+#      axes=FALSE, ylab = ylab_expr, cex.lab = 1.1, xlab = "Effect length",
+#      main="HMT and WaveQTL performance: effect strength 100%")
+# vioplot(
+#   sim_diff_data[sim_diff_data$effect_length == 8 & sim_diff_data$effect_strength == '100%',"auroc"]
+#   ,sim_diff_data[sim_diff_data$effect_length == 16 & sim_diff_data$effect_strength == '100%',"auroc"]
+#   ,sim_diff_data[sim_diff_data$effect_length == 24 & sim_diff_data$effect_strength == '100%',"auroc"]
+#   , add=TRUE, col=cols.efsize)
+# axis(2)
+# axis(side = 1, at = 1:3
+#      , labels = c(8,16,24)
+#      , cex.axis = 0.9)
+# abline(h=0,col="grey40",lty=3)
+# box()
 ```
