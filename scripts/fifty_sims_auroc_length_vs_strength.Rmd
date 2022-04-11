@@ -170,9 +170,9 @@ axis(side = 1, at = 1:5
      , cex.axis = 0.9)
 abline(h=0,col="grey40",lty=3)
 box()
-par(mar = c(4, 5, 3, 1))
-plot(0,0,type="n",xlim=c(0.5,3.5), ylim = c(-0.01,0.02),
-     axes=FALSE, ylab = ylab_expr, cex.lab = 1.1, xlab = "Effect length",
+par(mar = c(4, 4, 3, 1))
+plot(0,0,type="n",xlim=c(0.5,3.5), ylim = c(-0.01,0.03),
+     axes=FALSE, ylab = "", cex.lab = 1.1, xlab = "Effect length",
      main="HMT and WaveQTL performance: effect strength 100%")
 vioplot(
   sim_diff_data[sim_diff_data$effect_length == 8 & sim_diff_data$effect_strength == '100%',"auroc"]
