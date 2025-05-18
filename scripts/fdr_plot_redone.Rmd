@@ -1,0 +1,219 @@
+---
+title: "FDR Plot Redone"
+author: "Brendan Law"
+date: "18/05/2025"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This is a repeat of `real_data_analysis.Rmd` to get a plot that's more like Figure 1b on Shim and Stephens' original Wavelet paper here: https://github.com/heejungshim/WaveQTL/blob/master/doc/paper/Shim_2014.pdf
+
+This takes the data from `real_data_analysis.Rmd` and tries to do the same sort of bar plot.
+
+Note that as of 2025, to install the qvalue package from Bioconductor, refer to this website: https://bioconductor.org/packages/release/bioc/html/qvalue.html
+
+Current process is to run:
+```
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("qvalue")
+```
+
+Data pre-processing functions:
+```{r}
+library(data.table)
+
+hmt_pvals = readRDS("../data/real_data_analysis/hmt_pvals.RDS")
+nohmt_pvals = readRDS("../data/real_data_analysis/nohmt_pvals.RDS")
+
+hmt_pvals = hmt_pvals[!is.na(pval)]
+nohmt_pvals = nohmt_pvals[!is.na(pval)]
+
+pval = data.table(
+  pval.hmt = as.numeric(hmt_pvals$pval)
+  ,pval.nohmt = as.numeric(nohmt_pvals$pval)
+)
+```
+
+
+```{r}
+# check histograms
+hist(pval$pval.hmt, breaks=100, main = "hmt")
+
+hist(pval$pval.nohmt, breaks=100, main = "nohmt")
+
+# apply qvalue package
+library("qvalue")
+qval.hmt = qvalue(pval$pval.hmt) # 1
+qval.nohmt = qvalue(pval$pval.nohmt) # 0.002288085
+
+# check the proportion of null cases
+qval.hmt$pi0 # 0.8354974
+qval.nohmt$pi0 # 0.8496002
+
+# possible values of FDR
+alpha.list = seq(0, 0.1, by=0.001)
+length(alpha.list)
+## 101
+
+# count the number of significant tests at a given FDR
+num.hmt = num.nohmt = rep(NA, length(alpha.list))
+for(i in 1:length(alpha.list)){
+  num.hmt[i] = sum(qval.hmt$qvalues < alpha.list[i])
+  num.nohmt[i] = sum(qval.nohmt$qvalues < alpha.list[i])
+}
+
+# number of significant tests at FDR = 0.05
+wh = which(alpha.list == 0.05)
+num.hmt[wh] # 208
+num.nohmt[wh] # 147
+```
+
+
+Make bar plot of number of significant vs non significant dsQTLs identified by HMT vs non HMT approach at FDR of 0.02, 0.05.
+
+The whole idea here is to find:
+- dsQTLs which are identified by both (significant in both); that's the dark green.
+- dsQTLs identified in HMT but not Wavelet (light green for HMT)
+- dsQTLs identified in Wavelet but not HMT (light green for Wavelet)
+
+```{r}
+# at 0.05, here are:
+# significant dsQTLs under HMT
+hmt_sig_005 = which(qval.hmt$qvalues < .05)
+# not significant dsQTLs under HMT
+hmt_not_sig_005 = which(qval.hmt$qvalues > .05)
+
+# significant dsQTLs under wavelet
+nohmt_sig_005 = which(qval.nohmt$qvalues < .05)
+# not significant dsQTLs under wavelet
+nohmt_not_sig_005 = which(qval.nohmt$qvalues > .05)
+
+# dsQTLs significant in both
+dsqtls_sig_both_005 <- intersect(hmt_sig_005, nohmt_sig_005)
+length(dsqtls_sig_both_005)
+# dsQTLs significant in HMT but not Wavelet
+dsqtls_sig_hmt_only_005 <- setdiff(hmt_sig_005, nohmt_sig_005)
+length(dsqtls_sig_hmt_only_005)
+# dsQTLs significant in Wavelet but not HMT
+dsqtls_sig_wavelet_only_005 <- setdiff(nohmt_sig_005, hmt_sig_005)
+length(dsqtls_sig_wavelet_only_005)
+```
+
+```{r}
+# at 0.02, here are:
+# significant dsQTLs under HMT
+hmt_sig_002 = which(qval.hmt$qvalues < .02)
+# not significant dsQTLs under HMT
+hmt_not_sig_002 = which(qval.hmt$qvalues > .02)
+
+# significant dsQTLs under wavelet
+nohmt_sig_002 = which(qval.nohmt$qvalues < .02)
+# not significant dsQTLs under wavelet
+nohmt_not_sig_002 = which(qval.nohmt$qvalues > .02)
+
+# dsQTLs significant in both
+dsqtls_sig_both_002 <- intersect(hmt_sig_002, nohmt_sig_002)
+length(dsqtls_sig_both_002)
+# dsQTLs significant in HMT but not Wavelet
+dsqtls_sig_hmt_only_002 <- setdiff(hmt_sig_002, nohmt_sig_002)
+length(dsqtls_sig_hmt_only_002)
+# dsQTLs significant in Wavelet but not HMT
+dsqtls_sig_wavelet_only_002 <- setdiff(nohmt_sig_002, hmt_sig_002)
+length(dsqtls_sig_wavelet_only_002)
+```
+
+
+```{r}
+# Make bar plots
+library(ggplot2)
+library(dplyr)
+
+
+df <- data.table(
+  fdr = rep(c("FDR = 2%","FDR = 5%"), each=2),
+  method = rep(c("HMT","Wavelet"),2),
+  num_sig_both = rep(c(length(dsqtls_sig_both_002), length(dsqtls_sig_both_005)), each=2),
+  num_sig_this_only=c(
+    length(dsqtls_sig_hmt_only_002),
+    length(dsqtls_sig_wavelet_only_002),
+    length(dsqtls_sig_hmt_only_005),
+    length(dsqtls_sig_wavelet_only_005)
+  )
+)
+
+df_melt <- melt.data.table(df,id.vars=c("fdr","method"))
+
+ggplot(df_melt, aes(x = factor(method), y = value, group = factor(fdr), fill = variable)) +
+  geom_col(position="stack") +
+  facet_wrap(~fdr) +
+  labs(x = "Method", y = "Number of significant tests", title = "") +
+  theme_minimal() + 
+  scale_fill_discrete(labels=c("Significant in the other approach", "Not significant in the other approach"), name="") +
+  theme(legend.position = "bottom")
+```
+
+```{r}
+# Ensure your data is in the right format
+df_melt$method <- as.factor(df_melt$method)
+df_melt$variable <- as.factor(df_melt$variable)
+df_melt$fdr <- as.factor(df_melt$fdr)
+
+# Unique FDR levels
+fdr_levels <- levels(df_melt$fdr)
+n_panels <- length(fdr_levels)
+
+# Define fill colors
+fill_colors <- c("#006400", "#00FF00")
+legend_labels <- c("Significant in the other approach", "Not significant in the other approach")
+
+path = "../figures/compare_significant_tests.png"
+png(path, units="in", width = 7, height = 3, res =300)
+# Create a 1-row, 3-column layout: 2 plots + 1 legend
+layout(matrix(c(1, 2, 3), nrow = 1), widths = c(1, 1, 1))  # Third column is for the legend
+
+# Set margins and outer margins
+par(mar = c(5, 4, 2, 1), oma = c(1, 0, 1, 0))
+
+# Compute shared y-axis max
+max_y <- 250
+# max_y <- 0
+# for (i in seq_along(fdr_levels)) {
+#   sub_data <- subset(df_melt, fdr == fdr_levels[i])
+#   tab <- xtabs(value ~ variable + method, data = sub_data)
+#   max_y <- max(max_y, sum(tab))
+# }
+
+# Plot each facet
+for (i in seq_along(fdr_levels)) {
+  sub_data <- subset(df_melt, fdr == fdr_levels[i])
+  tab <- xtabs(value ~ variable + method, data = sub_data)
+  
+  barplot(
+    tab,
+    beside = FALSE,
+    col = fill_colors,
+    main = fdr_levels[i],
+    xlab = "",
+    ylab = if (i == 1) "Number of significant tests" else "",
+    las = 0,
+    ylim = c(0, max_y),
+    yaxt = if (i == 1) "s" else "n"
+  )
+}
+
+# Plot empty plot for legend
+par(mar = c(0, 0, 0, 0))
+plot.new()
+legend("center",
+       legend = legend_labels,
+       fill = fill_colors,
+       bty = "n",
+       xpd = TRUE)
+dev.off()
+
+```
