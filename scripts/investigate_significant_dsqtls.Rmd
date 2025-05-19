@@ -1,0 +1,132 @@
+---
+title: "Investigate significant QTLs"
+author: "Brendan Law"
+date: "19/05/2025"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Goal here is to look at dsQTLs which came up significant in HMT but not in WaveQTL.
+
+Data pre-processing functions:
+```{r}
+library(data.table)
+
+hmt_pvals = readRDS("../data/real_data_analysis/hmt_pvals.RDS")
+nohmt_pvals = readRDS("../data/real_data_analysis/nohmt_pvals.RDS")
+
+hmt_pvals = hmt_pvals[!is.na(pval)]
+nohmt_pvals = nohmt_pvals[!is.na(pval)]
+
+pval = data.table(
+  pval.hmt = as.numeric(hmt_pvals$pval)
+  ,pval.nohmt = as.numeric(nohmt_pvals$pval)
+)
+```
+
+
+```{r}
+# check histograms
+hist(pval$pval.hmt, breaks=100, main = "hmt")
+
+hist(pval$pval.nohmt, breaks=100, main = "nohmt")
+
+# apply qvalue package
+library("qvalue")
+qval.hmt = qvalue(pval$pval.hmt) # 1
+qval.nohmt = qvalue(pval$pval.nohmt) # 0.002288085
+
+# check the proportion of null cases
+qval.hmt$pi0 # 0.8354974
+qval.nohmt$pi0 # 0.8496002
+
+# possible values of FDR
+alpha.list = seq(0, 0.1, by=0.001)
+length(alpha.list)
+## 101
+
+# count the number of significant tests at a given FDR
+num.hmt = num.nohmt = rep(NA, length(alpha.list))
+for(i in 1:length(alpha.list)){
+  num.hmt[i] = sum(qval.hmt$qvalues < alpha.list[i])
+  num.nohmt[i] = sum(qval.nohmt$qvalues < alpha.list[i])
+}
+
+# number of significant tests at FDR = 0.05
+wh = which(alpha.list == 0.05)
+num.hmt[wh] # 208
+num.nohmt[wh] # 147
+```
+
+So now let's take a look at some of these. What characterises these and makes them so significant under this method? Going under the FDR of 0.05, here was the breakdown of dsQTLs which were significant in both, only significant in HMT, and only significant in Wavelet:
+```{r}
+# at 0.05, here are:
+# significant dsQTLs under HMT
+hmt_sig_005 = which(qval.hmt$qvalues < .05)
+# not significant dsQTLs under HMT
+hmt_not_sig_005 = which(qval.hmt$qvalues > .05)
+
+# significant dsQTLs under wavelet
+nohmt_sig_005 = which(qval.nohmt$qvalues < .05)
+# not significant dsQTLs under wavelet
+nohmt_not_sig_005 = which(qval.nohmt$qvalues > .05)
+
+# dsQTLs significant in both
+dsqtls_sig_both_005 <- intersect(hmt_sig_005, nohmt_sig_005)
+length(dsqtls_sig_both_005)
+# dsQTLs significant in HMT but not Wavelet
+dsqtls_sig_hmt_only_005 <- setdiff(hmt_sig_005, nohmt_sig_005)
+length(dsqtls_sig_hmt_only_005)
+# dsQTLs significant in Wavelet but not HMT
+dsqtls_sig_wavelet_only_005 <- setdiff(nohmt_sig_005, hmt_sig_005)
+length(dsqtls_sig_wavelet_only_005)
+```
+
+These are the locations we want to look at:
+
+```{r}
+dsqtls_sig_hmt_only_005
+```
+
+But we can do probably even better by thinning down to the red dots in the Qvalue plots, which are where HMT is significant and Wavelet had an FDR < 0.05:
+```{r}
+even_more_significant = which((qval.nohmt$qvalues > 0.5) & (qval.hmt$qvalues < 0.05))
+even_more_significant
+```
+
+Which should be a subset of the ones above:
+```{r}
+setdiff(even_more_significant, dsqtls_sig_hmt_only_005)
+setdiff(dsqtls_sig_hmt_only_005, even_more_significant)
+```
+
+
+And if we look at these, what do we find...
+```{r}
+sig_hmt_data=hmt_pvals[even_more_significant]
+sig_nohmt_data=nohmt_pvals[even_more_significant]
+merge(sig_hmt_data,sig_nohmt_data, by=c("chr","site"))
+```
+
+Some pretty wild differences in p-vals (0.00009 vs 0.99) which, looking at my previous logs and notes, we suspected may have been a bug. We'll need to look into these. Joining all the data together rather than just those above, we get some more sensible differences.
+```{r}
+merge(hmt_pvals, nohmt_pvals,by=c("chr","site"))[order(pval.x-pval.y)][20:40]
+```
+
+But moving it to the point where he p-vals are significant under one and not the other then becomes a bit trickier:
+```{r}
+merge(hmt_pvals, nohmt_pvals,by=c("chr","site"))[order(pval.x-pval.y)][pval.x < 0.05][order(pval.x-pval.y)][35:50]
+```
+There are some, but the differences are quite subtle. Still worth a look if we can get data.
+
+We seem to have data for:
+- 1.2722, 10,1880
+- so perhaps we can start there.
+- More 'moderate' changes of interest would be 1,2585, 9,1742, 17,597, 20,479, 13,765, 17,2061, 16,1146, 21,689
+- Note there's some useful stuff in `Research Project/Masters_Project_Git/analysis/20210918_paperprep_run5/effect_size` although not sure if this was post-fixing the bug. Look at the notes again. Ok looks like maybe this is it!
+- We do have 1,2585, 9,1742, so worth starting there also.
+
+Indeed that is the case. Let's look into the 'even_more_significant' group. Ok, how do we do the plots with the effect sizes and the pink shaded lines again?
